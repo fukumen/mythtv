@@ -78,6 +78,13 @@ QString dvb_decode_text(const unsigned char *src, uint raw_length,
     if (src[0] == 0x1f)
         return freesat_huffman_to_string(src, raw_length);
 
+    if (src[0] == 0x15) 
+	return QString::fromUtf8((char *)(src + 1), raw_length - 1). 
+	    replace(QString("\n"), QString(" ")); 
+    else if (src[0] == 0x11) 
+	return QTextCodec::codecForName("UTF-16BE")->toUnicode((char *)(src + 1), raw_length - 1). 
+	    replace(QString("\n"), QString(" ")); 
+
     if ((0x10 < src[0]) && (src[0] < 0x20))
     {
         // TODO: Handle multi-byte encodings
@@ -156,7 +163,14 @@ QString dvb_decode_short_name(const unsigned char *src, uint raw_length)
         return "";
     }
 
-       if ((0x10 < src[0]) && (src[0] < 0x20))
+    if (src[0] == 0x15) 
+	return QString::fromUtf8((char *)(src + 1), raw_length - 1). 
+	    replace(QString("\n"), QString(" ")); 
+    else if (src[0] == 0x11) 
+	return QTextCodec::codecForName("UTF-16BE")->toUnicode((char *)(src + 1), raw_length - 1). 
+	    replace(QString("\n"), QString(" ")); 
+
+    if ((0x10 < src[0]) && (src[0] < 0x20))
     {
         // TODO: Handle multi-byte encodings
         VERBOSE(VB_SIPARSER, "dvb_decode_short_name: "
