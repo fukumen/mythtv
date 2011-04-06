@@ -4,8 +4,8 @@
 #include <iconv.h>
 
 /*#define USE_UNICODE_SQUAREDCJK	(1)*/
+/*#define DEBUG	(1)*/
 
-#define DEBUG
 #ifdef DEBUG
 #include <stdio.h>
 #include <sys/time.h>
