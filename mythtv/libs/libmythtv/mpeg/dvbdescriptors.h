@@ -1056,6 +1056,33 @@ class ExtendedEventDescriptor : public DVBDescriptor
     //   item_length            8   1.0+p2
     //   for (j=0;j<N;j++) { item_char 8 }
     // }
+    QString ItemText(void) const
+        {
+	    QString	item;
+	    uint	left, p = 7, ItemDescriptionLen, ItemLength;
+	    item = "";
+	    left = LengthOfItems();
+	    while (left > 0) {
+		ItemDescriptionLen = _data[p++];
+
+//		item += dvb_decode_text(&_data[p], ItemDescriptionLen);
+		p += ItemDescriptionLen;
+//		if (ItemDescriptionLen > 0)
+//		    item += "\n";
+
+		ItemLength = _data[p++];
+
+		item += dvb_decode_text(&_data[p], ItemLength);
+		p += ItemLength;
+		if (ItemLength > 0)
+		    item += "\n";
+
+		left -= 2 + ItemDescriptionLen + ItemLength;
+		if (left > 0)
+		    item += "\n";
+	    }
+	    return item;
+	}
     // text_length 8
     uint TextLength(void)       const { return _data[7 + _data[6]]; }
     // for (i=0; i<N; i++) { text_char 8 }

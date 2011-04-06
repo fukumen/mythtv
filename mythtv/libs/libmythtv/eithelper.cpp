@@ -278,7 +278,9 @@ static void parse_dvb_event_descriptors(desc_list_t list, uint fix,
         }
 
         ExtendedEventDescriptor eed(bestExtendedEvents[j], dvbkind);
-        if (enc)
+	if (dvbkind == kKindISDB)
+            description += eed.ItemText();
+        else if (enc)
             description += eed.Text(enc, enc_len);
         else
             description += eed.Text();
