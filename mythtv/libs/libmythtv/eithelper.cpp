@@ -222,11 +222,11 @@ void EITHelper::AddETT(uint atsc_major, uint atsc_minor,
 static void parse_dvb_event_descriptors(desc_list_t list, uint fix,
                                         QMap<uint,uint> languagePreferences,
                                         QString &title, QString &subtitle,
-                                        QString &description)
+                                        QString &description, DVBKind dvbkind)
 {
     const unsigned char *bestShortEvent =
-        MPEGDescriptor::FindBestMatch(
-            list, DescriptorID::short_event, languagePreferences);
+        DVBDescriptor::FindBestMatch(
+            list, DescriptorID::short_event, languagePreferences, dvbkind);
 
     unsigned char enc_1[3]  = { 0x10, 0x00, 0x01 };
     unsigned char enc_15[3] = { 0x10, 0x00, 0x0f };
@@ -251,7 +251,7 @@ static void parse_dvb_event_descriptors(desc_list_t list, uint fix,
 
     if (bestShortEvent)
     {
-        ShortEventDescriptor sed(bestShortEvent);
+        ShortEventDescriptor sed(bestShortEvent, dvbkind);
         if (enc)
         {
             title    = sed.EventName(enc, enc_len);
@@ -265,8 +265,8 @@ static void parse_dvb_event_descriptors(desc_list_t list, uint fix,
     }
 
     vector<const unsigned char*> bestExtendedEvents =
-        MPEGDescriptor::FindBestMatches(
-            list, DescriptorID::extended_event, languagePreferences);
+        DVBDescriptor::FindBestMatches(
+            list, DescriptorID::extended_event, languagePreferences, dvbkind);
 
     description = "";
     for (uint j = 0; j < bestExtendedEvents.size(); j++)
@@ -277,7 +277,7 @@ static void parse_dvb_event_descriptors(desc_list_t list, uint fix,
             break;
         }
 
-        ExtendedEventDescriptor eed(bestExtendedEvents[j]);
+        ExtendedEventDescriptor eed(bestExtendedEvents[j], dvbkind);
         if (enc)
             description += eed.Text(enc, enc_len);
         else
@@ -320,6 +320,7 @@ void EITHelper::AddEIT(const DVBEventInformationTable *eit)
 
     uint tableid   = eit->TableID();
     uint version   = eit->Version();
+    DVBKind dvbkind = eit->DVBKindStatus();
     for (uint i = 0; i < eit->EventCount(); i++)
     {
         // Skip event if we have already processed it before...
@@ -362,7 +363,7 @@ void EITHelper::AddEIT(const DVBEventInformationTable *eit)
         else
         {
             parse_dvb_event_descriptors(list, fix, languagePreferences,
-                                        title, subtitle, description);
+                                        title, subtitle, description, dvbkind);
         }
 
         parse_dvb_component_descriptors(list, subtitle_type, audio_props,
@@ -445,7 +446,7 @@ void EITHelper::AddEIT(const DVBEventInformationTable *eit)
             }
             else
             {
-                ContentDescriptor content(content_data);
+                ContentDescriptor content(content_data, dvbkind);
                 category      = content.GetDescription(0);
                 category_type = content.GetMythCategory(0);
             }
@@ -508,7 +509,7 @@ void EITHelper::AddEIT(const PremiereContentInformationTable *cit)
         cit->Descriptors(), cit->DescriptorsLength());
 
     parse_dvb_event_descriptors(list, fix, languagePreferences,
-                                title, subtitle, description);
+                                title, subtitle, description, kKindDVB);
 
     parse_dvb_component_descriptors(list, subtitle_type, audio_props,
                                     video_props);
@@ -517,7 +518,7 @@ void EITHelper::AddEIT(const PremiereContentInformationTable *cit)
         MPEGDescriptor::Find(list, DescriptorID::content);
     if (content_data)
     {
-        ContentDescriptor content(content_data);
+        ContentDescriptor content(content_data, kKindDVB);
         // fix events without real content data
         if (content.Nibble(0)==0x00)
         {

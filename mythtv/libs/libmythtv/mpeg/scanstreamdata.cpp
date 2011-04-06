@@ -4,10 +4,10 @@
 #include "atsctables.h"
 #include "dvbtables.h"
 
-ScanStreamData::ScanStreamData()
+ScanStreamData::ScanStreamData(DVBKind dvbkind)
     : MPEGStreamData(-1, true),
       ATSCStreamData(-1,-1, true),
-      DVBStreamData(0, 0, -1, true),
+      DVBStreamData(0, 0, -1, true, dvbkind),
       dvb_uk_freesat_si(false)
 {
 }

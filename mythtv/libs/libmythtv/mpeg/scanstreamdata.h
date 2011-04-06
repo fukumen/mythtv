@@ -12,7 +12,7 @@ class ScanStreamData :
     public DVBStreamData
 {
   public:
-    ScanStreamData();
+    ScanStreamData(DVBKind dvbkind);
     virtual ~ScanStreamData();
 
     bool IsRedundant(uint pid, const PSIPTable&) const;

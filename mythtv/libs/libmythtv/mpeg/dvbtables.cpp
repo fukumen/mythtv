@@ -70,7 +70,7 @@ QString NetworkInformationTable::NetworkName() const
             MPEGDescriptor::Find(parsed, DescriptorID::network_name);
 
         if (desc)
-            _cached_network_name = NetworkNameDescriptor(desc).Name();
+            _cached_network_name = NetworkNameDescriptor(desc, _dvbkind).Name();
         else
             _cached_network_name = QString("Net ID 0x%1")
                 .arg(NetworkID(), 0, 16);
@@ -132,7 +132,7 @@ ServiceDescriptor *ServiceDescriptionTable::GetServiceDescriptor(uint i) const
         MPEGDescriptor::Find(parsed, DescriptorID::service);
 
     if (desc)
-        return new ServiceDescriptor(desc);
+        return new ServiceDescriptor(desc, _dvbkind);
 
     return NULL;
 }
@@ -236,11 +236,19 @@ bool DVBEventInformationTable::IsEIT(uint table_id)
 /** \fn dvbdate2qt(const unsigned char*)
  *  \return UTC time as QDateTime
  */
-QDateTime dvbdate2qt(const unsigned char *buf)
+QDateTime dvbdate2qt(const unsigned char *buf, DVBKind dvbkind)
 {
     uint mjd = (buf[0] << 8) | buf[1];
     if (mjd >= 40587)
     {
+        if (dvbkind == kKindISDB)
+        {
+            QDate date(1970, 1, 1);
+            QTime time(byteBCD2int(buf[2]), byteBCD2int(buf[3]),
+                       byteBCD2int(buf[4]));
+            return QDateTime(date.addDays(mjd - 40587), time).toUTC();
+        }
+
         QDateTime result;
         result.setTimeSpec(Qt::UTC);
         // Modified Julian date as number of days since 17th November 1858.
@@ -273,19 +281,30 @@ QDateTime dvbdate2qt(const unsigned char *buf)
     QTime time(byteBCD2int(buf[2]), byteBCD2int(buf[3]),
                byteBCD2int(buf[4]));
 
-    return QDateTime(date, time, Qt::UTC);
+    if (dvbkind == kKindISDB)
+        return QDateTime(date, time, Qt::LocalTime).toUTC();
+    else
+        return QDateTime(date, time, Qt::UTC);
 }
 
 /** \fn dvbdate2unix(const unsigned char*)
  *  \return UTC time as time_t
  */
-time_t dvbdate2unix(const unsigned char *buf)
+time_t dvbdate2unix(const unsigned char *buf, DVBKind dvbkind)
 {
     // Modified Julian date as number of days since 17th November 1858.
     // The unix epoch, 1st Jan 1970, was day 40587.
     uint mjd = (buf[0] << 8) | buf[1];
     if (mjd < 40587)
         return 0; // we don't handle pre-unix dates..
+
+    if (dvbkind == kKindISDB)
+    {
+        QDate date(1970, 1, 1);
+        QTime time(byteBCD2int(buf[2]), byteBCD2int(buf[3]),
+                   byteBCD2int(buf[4]));
+        return QDateTime(date.addDays(mjd - 40587), time).toUTC().toTime_t();
+    }
 
     uint secsSince1970 = (mjd - 40587)   * 86400;
     secsSince1970 += byteBCD2int(buf[2]) * 3600;

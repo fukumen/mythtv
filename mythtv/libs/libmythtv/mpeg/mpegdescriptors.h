@@ -153,6 +153,13 @@ class DescriptorID
     };
 };
 
+typedef enum
+{
+    kKindUnknown = 0,
+    kKindDVB     = 1,
+    kKindISDB    = 2,
+} DVBKind;
+
 class MPEGDescriptor
 {
   public:
@@ -172,11 +179,6 @@ class MPEGDescriptor
 
     static const unsigned char* Find(const desc_list_t &parsed, uint desc_tag);
     static desc_list_t FindAll(const desc_list_t &parsed, uint desc_tag);
-
-    static const unsigned char* FindBestMatch(
-        const desc_list_t &parsed, uint desc_tag, QMap<uint,uint> &langPref);
-    static desc_list_t FindBestMatches(
-        const desc_list_t &parsed, uint desc_tag, QMap<uint,uint> &langPref);
 
     virtual QString toString() const;
   protected:
