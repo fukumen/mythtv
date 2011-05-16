@@ -130,7 +130,8 @@ MythPlayer::MythPlayer(bool muted)
       parentWidget(NULL), embedid(0),
       embx(-1), emby(-1), embw(-1), embh(-1),
       // State
-      decoderPaused(false), pauseDecoder(false), unpauseDecoder(false),
+      totalDecoderPause(false), decoderPaused(false),
+      pauseDecoder(false), unpauseDecoder(false),
       killdecoder(false),   decoderSeek(-1),     decodeOneFrame(false),
       needNewPauseFrame(false),
       bufferPaused(false),  videoPaused(false),
@@ -200,7 +201,7 @@ MythPlayer::MythPlayer(bool muted)
       avsync_adjustment(0),         avsync_avg(0),
       refreshrate(0),
       lastsync(false),              repeat_delay(0),
-      disp_timecode(0),
+      disp_timecode(0),             avsync_audiopaused(false),
       // Time Code stuff
       prevtc(0),                    prevrp(0),
       savedAudioTimecodeOffset(0),
@@ -1664,10 +1665,22 @@ void MythPlayer::AVSync(VideoFrame *buffer, bool limit_delay)
         {
             // If we are using software decoding, skip this frame altogether.
             VERBOSE(VB_PLAYBACK, LOC + dbg + "dropping frame to catch up.");
+            // Pause the audio if necessary
+            if (!using_null_videoout && !audio.IsPaused())
+            {
+                audio.Pause(true);
+                avsync_audiopaused = true;
+            }
         }
     }
     else if (!using_null_videoout)
     {
+        if (avsync_audiopaused)
+        {
+            avsync_audiopaused = false;
+            audio.Pause(false);
+        }
+
         // if we get here, we're actually going to do video output
         osdLock.lock();
         videoOutput->PrepareFrame(buffer, ps, osd);
@@ -2016,7 +2029,11 @@ void MythPlayer::VideoStart(void)
     m_can_double       = false;
     m_scan_tracker     = 2;
 
-    if (using_null_videoout)
+    if (player_ctx->IsPIP() && using_null_videoout)
+    {
+        videosync = new DummyVideoSync(videoOutput, fr_int, 0, false);
+    }
+    else if (using_null_videoout)
     {
         videosync = new USleepVideoSync(videoOutput, (int)fr_int, 0, false);
     }
@@ -2778,6 +2795,12 @@ void MythPlayer::DecoderLoop(bool pause)
     while (!killdecoder && !IsErrored())
     {
         DecoderPauseCheck();
+
+        if (totalDecoderPause)
+        {
+            usleep(1000);
+            continue;
+        }
 
         if (!decoder_change_lock.tryLock(1))
             continue;
@@ -4493,6 +4516,7 @@ bool MythPlayer::SetVideoByComponentTag(int tag)
  */
 void MythPlayer::SetDecoder(DecoderBase *dec)
 {
+    totalDecoderPause = true;
     PauseDecoder();
 
     {
@@ -4509,6 +4533,8 @@ void MythPlayer::SetDecoder(DecoderBase *dec)
         }
         decoder_change_lock.unlock();
     }
+
+    totalDecoderPause = false;
 }
 
 bool MythPlayer::PosMapFromEnc(unsigned long long start,

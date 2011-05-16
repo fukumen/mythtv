@@ -89,14 +89,11 @@ QString DVBDescriptor::dvb_decode_text(const unsigned char *src, uint raw_length
     if (src[0] == 0x1f)
         return freesat_huffman_to_string(src, raw_length);
 
-    if (src[0] == 0x15) 
-	return QString::fromUtf8((char *)(src + 1), raw_length - 1). 
-	    replace(QString("\n"), QString(" ")); 
-    else if (src[0] == 0x11) 
+    if (src[0] == 0x11) 
 	return QTextCodec::codecForName("UTF-16BE")->toUnicode((char *)(src + 1), raw_length - 1). 
 	    replace(QString("\n"), QString(" ")); 
 
-    if ((0x10 < src[0]) && (src[0] < 0x20))
+    if (((0x10 < src[0]) && (src[0] < 0x15)) || ((0x15 < src[0]) && (src[0] < 0x20)))
     {
         // TODO: Handle multi-byte encodings
         VERBOSE(VB_SIPARSER, "dvb_decode_text: "
@@ -156,6 +153,10 @@ static QString decode_text(const unsigned char *buf, uint length)
         else
             return QString::fromLocal8Bit((char*)(buf + 3), length - 3);
     }
+    else if (buf[0] == 0x15) // Already Unicode
+    {
+        return QString::fromUtf8((char*)(buf + 1), length - 1);
+    }
     else
     {
         // Unknown/invalid encoding - assume local8Bit
@@ -184,14 +185,11 @@ QString DVBDescriptor::dvb_decode_short_name(const unsigned char *src, uint raw_
 	    replace(QString("\n"), QString(" ")); 
     }
 
-    if (src[0] == 0x15) 
-	return QString::fromUtf8((char *)(src + 1), raw_length - 1). 
-	    replace(QString("\n"), QString(" ")); 
-    else if (src[0] == 0x11) 
+    if (src[0] == 0x11) 
 	return QTextCodec::codecForName("UTF-16BE")->toUnicode((char *)(src + 1), raw_length - 1). 
 	    replace(QString("\n"), QString(" ")); 
 
-    if ((0x10 < src[0]) && (src[0] < 0x20))
+    if (((0x10 < src[0]) && (src[0] < 0x15)) || ((0x15 < src[0]) && (src[0] < 0x20)))
     {
         // TODO: Handle multi-byte encodings
         VERBOSE(VB_SIPARSER, "dvb_decode_short_name: "
